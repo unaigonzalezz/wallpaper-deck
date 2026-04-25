@@ -1,0 +1,191 @@
+<!doctype html>
+<html>
+  <head lang="en">
+    <title>Wallpaper Change Settings</title>
+    <meta charset="utf-8" />
+    <script src="./shared/sdpi-components.js"></script>
+    <link rel="stylesheet" href="./styles/styles.css" />
+    <link rel="stylesheet" href="./styles/icons.css" />
+  </head>
+
+  <body>
+    <div id="previewRow" style="display: none">
+      <sdpi-item>
+        <img id="previewImg" src="" alt="" />
+      </sdpi-item>
+    </div>
+
+    <sdpi-item label="Wallpaper">
+      <sdpi-select
+        setting="wallpaperId"
+        label-setting="wallpaperTitle"
+        datasource="getWallpapers"
+        hot-reload
+        show-refresh
+        placeholder="Select a wallpaper…"
+      ></sdpi-select>
+    </sdpi-item>
+
+    <sdpi-item label="Display mode">
+      <sdpi-select setting="logoMode">
+        <option value="logo">Logo</option>
+        <option value="icon">Icon</option>
+        <option value="none">None</option>
+      </sdpi-select>
+    </sdpi-item>
+
+    <details id="advancedSection">
+      <summary>Advanced</summary>
+
+      <sdpi-item label="Detected Engine">
+        <div class="field-row">
+          <span id="detectedEngine" class="detected-path">—</span>
+          <span
+            class="tip"
+            data-tip="Path to wallpaper64.exe found via the Steam registry. Used automatically when no override is set below."
+            ><span class="material-symbols--info-outline-rounded"></span
+          ></span>
+        </div>
+      </sdpi-item>
+
+      <sdpi-item label="Override Engine EXE">
+        <div class="field-row">
+          <sdpi-textfield setting="wallpaperEnginePath" placeholder="Leave empty to use auto-detected"></sdpi-textfield>
+          <span
+            class="tip"
+            data-tip="Custom path to wallpaper64.exe. Only needed if auto-detection failed or you have Wallpaper Engine in a non-standard location."
+            ><span class="material-symbols--info-outline-rounded"></span
+          ></span>
+        </div>
+      </sdpi-item>
+
+      <sdpi-item label="Detected Workshop">
+        <div class="field-row">
+          <span id="detectedBasePath" class="detected-path">—</span>
+          <span
+            class="tip"
+            data-tip="Steam Workshop folder for Wallpaper Engine (App ID 431960). Found automatically via Steam registry."
+            ><span class="material-symbols--info-outline-rounded"></span
+          ></span>
+        </div>
+      </sdpi-item>
+
+      <sdpi-item label="Override Workshop">
+        <div class="field-row">
+          <sdpi-textfield setting="wallpaperBasePath" placeholder="Leave empty to use auto-detected"></sdpi-textfield>
+          <span
+            class="tip"
+            data-tip="Custom path to the Workshop folder (…/workshop/content/431960). Only needed if your Steam library is in a non-standard location."
+            ><span class="material-symbols--info-outline-rounded"></span
+          ></span>
+        </div>
+      </sdpi-item>
+    </details>
+    <sdpi-item label="Support">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; flex-direction: row; gap: 8px">
+          <a
+            style="cursor: pointer"
+            onclick="SDPIComponents.streamDeckClient.send('openUrl', { url: 'https://ko-fi.com/X8X4LBFTT' })"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img height="30" style="border: 0; height: 30px" src="./img/kofi.png" alt="Buy me a coffee on Ko-fi" />
+          </a>
+
+          <a
+            style="cursor: pointer"
+            onclick="
+              SDPIComponents.streamDeckClient.send('openUrl', { url: 'https://github.com/unaigonzalezz/wallpaper-deck' })
+            "
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img height="30" style="border: 0; height: 30px" src="./img/star.png" alt="Star this project on GitHub" />
+          </a>
+        </div>
+
+        <p style="margin: 0; font-size: 12px; line-height: 1.4; color: var(--sdpi-color)">
+          If you enjoy this project, you can support its development by buying me a coffee ☕ or starring the project on
+          GitHub ⭐.
+        </p>
+
+        <p style="margin: 0; font-size: 12px; line-height: 1.4; color: var(--sdpi-color)">
+          Every coffee and every star helps me continue improving the plugin, adding new features, and maintaining
+          future updates.
+        </p>
+      </div>
+    </sdpi-item>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        var client = SDPIComponents.streamDeckClient;
+        var prevWallpaperId;
+        var detectedPathsRequested = false;
+
+        function requestPreview(wallpaperId) {
+          client.send("sendToPlugin", { event: "getPreview", wallpaperId: wallpaperId });
+        }
+
+        function applyDetectedPaths(enginePath, basePath) {
+          var elEngine = document.getElementById("detectedEngine");
+          var elBase = document.getElementById("detectedBasePath");
+
+          if (enginePath) {
+            elEngine.textContent = enginePath;
+            elEngine.className = "detected-path found";
+          } else {
+            elEngine.textContent = "Not detected";
+            elEngine.className = "detected-path missing";
+          }
+
+          if (basePath) {
+            elBase.textContent = basePath;
+            elBase.className = "detected-path found";
+          } else {
+            elBase.textContent = "Not detected";
+            elBase.className = "detected-path missing";
+          }
+        }
+
+        document.querySelector("sdpi-select").addEventListener("valuechange", function (e) {
+          var id = e.target.value;
+          if (id) {
+            prevWallpaperId = id;
+            requestPreview(id);
+          }
+        });
+
+        client.didReceiveSettings.subscribe(function (data) {
+          var s = (data.payload && data.payload.settings) || {};
+          if (s.wallpaperId && s.wallpaperId !== prevWallpaperId) {
+            prevWallpaperId = s.wallpaperId;
+            requestPreview(s.wallpaperId);
+          }
+          if (!detectedPathsRequested) {
+            detectedPathsRequested = true;
+            client.send("sendToPlugin", { event: "getDetectedPaths" });
+          }
+        });
+
+        client.sendToPropertyInspector.subscribe(function (msg) {
+          var payload = (msg && msg.payload) || {};
+
+          if (payload.event === "previewImage") {
+            var row = document.getElementById("previewRow");
+            if (payload.image) {
+              document.getElementById("previewImg").src = payload.image;
+              row.style.display = "";
+            } else {
+              row.style.display = "none";
+            }
+          }
+
+          if (payload.event === "detectedPaths") {
+            applyDetectedPaths(payload.enginePath, payload.basePath);
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

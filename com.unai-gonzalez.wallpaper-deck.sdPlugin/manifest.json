@@ -1,0 +1,45 @@
+{
+  "Name": "Wallpaper Deck",
+  "Version": "0.1.0.0",
+  "Author": "Unai Gonzalez",
+  "Actions": [
+    {
+      "Name": "Change wallpaper",
+      "UUID": "com.unai-gonzalez.wallpaper-deck.change-wallpaper",
+      "Icon": "imgs/actions/wallpaper-change/icon",
+      "Tooltip": "Changes the active Wallpaper Engine wallpaper.",
+      "PropertyInspectorPath": "ui/wallpaper-change.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/wallpaper-change/key",
+          "TitleAlignment": "middle"
+        }
+      ]
+    }
+  ],
+  "Category": "Wallpaper Deck",
+  "CategoryIcon": "imgs/plugin/category-icon",
+  "CodePath": "bin/plugin.js",
+  "Description": "Change wallpapers from Wallpaper Engine instantly from a button press",
+  "Icon": "imgs/plugin/marketplace",
+  "SDKVersion": 3,
+  "Software": {
+    "MinimumVersion": "7.1"
+  },
+  "OS": [
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "Nodejs": {
+    "Version": "24",
+    "Debug": "enabled"
+  },
+  "UUID": "com.unai-gonzalez.wallpaper-deck",
+  "SupportURL": "https://unaigonzalez.es",
+  "URL": "https://unaigonzalez.es"
+}
