@@ -13,9 +13,9 @@ const sdPlugin = "com.unai-gonzalez.wallpaper-deck.sdPlugin";
  */
 const config = {
 	input: "src/plugin.ts",
-	external: ["sharp"],
 	output: {
 		file: `${sdPlugin}/bin/plugin.js`,
+		inlineDynamicImports: true,
 		sourcemap: isWatching,
 		sourcemapPathTransform: (relativeSourcePath, sourcemapPath) => {
 			return url.pathToFileURL(path.resolve(path.dirname(sourcemapPath), relativeSourcePath)).href;

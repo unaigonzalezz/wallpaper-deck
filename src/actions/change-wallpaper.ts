@@ -91,7 +91,7 @@ export class WallpaperChange extends SingletonAction<WallpaperSettings> {
     const { wallpaperId, logoMode } = ev.payload.settings;
     if (wallpaperId) {
       const preview = getPreviewBase64(this.getCachedBasePath(ev.action.id), wallpaperId);
-      await ev.action.setImage(await buildKeyImage(preview, logoMode ?? "icon"));
+      await ev.action.setImage(await buildKeyImage(preview, logoMode ?? "logo"));
     }
   }
 
