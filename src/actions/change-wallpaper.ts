@@ -12,6 +12,7 @@ import { existsSync, readdirSync, readFileSync } from "fs";
 import { join } from "path";
 import { DEFAULT_BASE, DEFAULT_ENGINE, DETECTED } from "../const/const";
 import { buildKeyImage, LogoMode } from "../utils/buildKeyImage";
+import { wrapTitle } from "../utils/wrapTitle";
 
 type WallpaperSettings = {
   wallpaperId?: string;
@@ -19,6 +20,7 @@ type WallpaperSettings = {
   wallpaperEnginePath?: string;
   wallpaperBasePath?: string;
   logoMode?: LogoMode;
+  showTitle?: boolean;
 };
 
 type PluginMessage = {
@@ -83,6 +85,9 @@ export class WallpaperChange extends SingletonAction<WallpaperSettings> {
     if (wallpaperId) {
       const preview = getPreviewBase64(this.getCachedBasePath(ev.action.id), wallpaperId);
       await ev.action.setImage(await buildKeyImage(preview, logoMode ?? "logo"));
+      await ev.action.setTitle(
+        ev.payload.settings.showTitle ? wrapTitle(ev.payload.settings.wallpaperTitle || "") : "",
+      );
     }
   }
 
@@ -92,6 +97,9 @@ export class WallpaperChange extends SingletonAction<WallpaperSettings> {
     if (wallpaperId) {
       const preview = getPreviewBase64(this.getCachedBasePath(ev.action.id), wallpaperId);
       await ev.action.setImage(await buildKeyImage(preview, logoMode ?? "logo"));
+      await ev.action.setTitle(
+        ev.payload.settings.showTitle ? wrapTitle(ev.payload.settings.wallpaperTitle || "") : "",
+      );
     }
   }
 

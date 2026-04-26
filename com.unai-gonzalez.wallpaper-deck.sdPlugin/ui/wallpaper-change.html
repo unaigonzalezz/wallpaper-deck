@@ -26,7 +26,11 @@
       ></sdpi-select>
     </sdpi-item>
 
-    <sdpi-item label="Display mode">
+    <sdpi-item label="Title">
+      <sdpi-checkbox setting="showTitle" label="Show wallpaper title"></sdpi-checkbox>
+    </sdpi-item>
+
+    <sdpi-item label="Overlay display mode">
       <sdpi-select setting="logoMode">
         <option value="logo">Logo</option>
         <option value="icon">Icon</option>
@@ -96,7 +100,9 @@
           <a
             style="cursor: pointer"
             onclick="
-              SDPIComponents.streamDeckClient.send('openUrl', { url: 'https://github.com/unaigonzalezz/wallpaper-deck' })
+              SDPIComponents.streamDeckClient.send('openUrl', {
+                url: 'https://github.com/unaigonzalezz/wallpaper-deck',
+              })
             "
             target="_blank"
             rel="noopener noreferrer"
