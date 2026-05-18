@@ -18,6 +18,22 @@
           "TitleAlignment": "middle"
         }
       ]
+    },
+    {
+      "Name": "Random wallpaper",
+      "UUID": "com.unai-gonzalez.wallpaper-deck.random-wallpaper",
+      "Icon": "imgs/actions/random-wallpaper/icon",
+      "Tooltip": "Sets a random installed Wallpaper Engine wallpaper.",
+      "PropertyInspectorPath": "ui/random-wallpaper.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/random-wallpaper/key",
+          "TitleAlignment": "middle"
+        }
+      ]
     }
   ],
   "Category": "Wallpaper Deck",
