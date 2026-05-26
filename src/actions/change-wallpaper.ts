@@ -5,13 +5,15 @@ import streamDeck, {
   SendToPluginEvent,
   SingletonAction,
   WillAppearEvent,
+  WillDisappearEvent,
 } from "@elgato/streamdeck";
 import type { JsonValue } from "@elgato/utils";
 import { execFile } from "child_process";
 import { existsSync, readdirSync, readFileSync } from "fs";
 import { join } from "path";
 import { DEFAULT_BASE, DEFAULT_ENGINE, DETECTED } from "../const/const";
-import { buildKeyImage, LogoMode } from "../utils/buildKeyImage";
+import { buildKeyImage, buildKeyImageFrames, type KeyFrame, LogoMode } from "../utils/buildKeyImage";
+import { parseGifFrames } from "../utils/parseGifFrames";
 import { wrapTitle } from "../utils/wrapTitle";
 
 type WallpaperSettings = {
@@ -21,6 +23,7 @@ type WallpaperSettings = {
   wallpaperBasePath?: string;
   logoMode?: LogoMode;
   showTitle?: boolean;
+  animate?: boolean;
 };
 
 type PluginMessage = {
@@ -32,6 +35,7 @@ type PluginMessage = {
 @action({ UUID: "com.unai-gonzalez.wallpaper-deck.change-wallpaper" })
 export class WallpaperChange extends SingletonAction<WallpaperSettings> {
   private readonly settingsCache = new Map<string, WallpaperSettings>();
+  private readonly animationTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   private cacheSettings(id: string, settings: WallpaperSettings): void {
     this.settingsCache.set(id, settings);
@@ -43,6 +47,58 @@ export class WallpaperChange extends SingletonAction<WallpaperSettings> {
 
   private getCachedEnginePath(id: string): string {
     return this.settingsCache.get(id)?.wallpaperEnginePath || DEFAULT_ENGINE;
+  }
+
+  private stopAnimation(actionId: string): void {
+    const timer = this.animationTimers.get(actionId);
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      this.animationTimers.delete(actionId);
+    }
+  }
+
+  private startAnimation(
+    actionId: string,
+    setImage: (png: string) => Promise<void>,
+    frames: KeyFrame[],
+  ): void {
+    this.stopAnimation(actionId);
+    let frameIndex = 0;
+
+    const tick = () => {
+      if (!this.animationTimers.has(actionId)) return;
+      const frame = frames[frameIndex];
+      frameIndex = (frameIndex + 1) % frames.length;
+      setImage(frame.png).catch(() => this.stopAnimation(actionId));
+      this.animationTimers.set(actionId, setTimeout(tick, frame.delay));
+    };
+
+    this.animationTimers.set(actionId, setTimeout(tick, 0));
+  }
+
+  private async updateButtonImage(
+    actionId: string,
+    setImage: (png: string) => Promise<void>,
+    settings: WallpaperSettings,
+  ): Promise<void> {
+    const { wallpaperId, logoMode, animate } = settings;
+    if (!wallpaperId) return;
+
+    const preview = getPreviewBase64(this.getCachedBasePath(actionId), wallpaperId);
+
+    this.stopAnimation(actionId);
+
+    if (animate !== false && preview?.startsWith("data:image/gif")) {
+      const raw = Buffer.from(preview.split(",")[1], "base64");
+      const rawFrames = parseGifFrames(raw);
+      if (rawFrames) {
+        const frames = await buildKeyImageFrames(rawFrames, logoMode ?? "logo");
+        this.startAnimation(actionId, setImage, frames);
+        return;
+      }
+    }
+
+    await setImage(await buildKeyImage(preview, logoMode ?? "logo"));
   }
 
   override async onKeyDown(ev: KeyDownEvent<WallpaperSettings>): Promise<void> {
@@ -80,27 +136,32 @@ export class WallpaperChange extends SingletonAction<WallpaperSettings> {
   }
 
   override async onWillAppear(ev: WillAppearEvent<WallpaperSettings>): Promise<void> {
-    this.cacheSettings(ev.action.id, ev.payload.settings);
-    const { wallpaperId, logoMode } = ev.payload.settings;
+    const settings = ev.payload.settings;
+    if (settings.animate === undefined) {
+      await ev.action.setSettings({ ...settings, animate: true });
+      return;
+    }
+    this.cacheSettings(ev.action.id, settings);
+    const { wallpaperId } = settings;
     if (wallpaperId) {
-      const preview = getPreviewBase64(this.getCachedBasePath(ev.action.id), wallpaperId);
-      await ev.action.setImage(await buildKeyImage(preview, logoMode ?? "logo"));
+      await this.updateButtonImage(ev.action.id, (png) => ev.action.setImage(png), settings);
+      await ev.action.setTitle(settings.showTitle ? wrapTitle(settings.wallpaperTitle || "") : "");
+    }
+  }
+
+  override async onDidReceiveSettings(ev: DidReceiveSettingsEvent<WallpaperSettings>): Promise<void> {
+    this.cacheSettings(ev.action.id, ev.payload.settings);
+    const { wallpaperId } = ev.payload.settings;
+    if (wallpaperId) {
+      await this.updateButtonImage(ev.action.id, (png) => ev.action.setImage(png), ev.payload.settings);
       await ev.action.setTitle(
         ev.payload.settings.showTitle ? wrapTitle(ev.payload.settings.wallpaperTitle || "") : "",
       );
     }
   }
 
-  override async onDidReceiveSettings(ev: DidReceiveSettingsEvent<WallpaperSettings>): Promise<void> {
-    this.cacheSettings(ev.action.id, ev.payload.settings);
-    const { wallpaperId, logoMode } = ev.payload.settings;
-    if (wallpaperId) {
-      const preview = getPreviewBase64(this.getCachedBasePath(ev.action.id), wallpaperId);
-      await ev.action.setImage(await buildKeyImage(preview, logoMode ?? "logo"));
-      await ev.action.setTitle(
-        ev.payload.settings.showTitle ? wrapTitle(ev.payload.settings.wallpaperTitle || "") : "",
-      );
-    }
+  override onWillDisappear(ev: WillDisappearEvent<WallpaperSettings>): void {
+    this.stopAnimation(ev.action.id);
   }
 
   override async onSendToPlugin(ev: SendToPluginEvent<JsonValue, WallpaperSettings>): Promise<void> {

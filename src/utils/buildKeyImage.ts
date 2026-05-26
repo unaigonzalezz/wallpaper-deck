@@ -1,7 +1,13 @@
 import { Jimp } from "jimp";
 import { KEY_SIZE, LOGO_PATH, LOGO_PATH_TEXT, LOGO_WIDTH, LOGO_WIDTH_TEXT } from "../const/const";
+import type { RawGifFrame } from "./parseGifFrames";
 
 export type LogoMode = "logo" | "icon" | "none";
+
+export interface KeyFrame {
+  png: string;
+  delay: number;
+}
 
 export async function buildKeyImage(preview: string | null, logoMode: LogoMode = "icon"): Promise<string> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -30,4 +36,27 @@ export async function buildKeyImage(preview: string | null, logoMode: LogoMode =
 
   const buf = await base.getBuffer("image/png");
   return "data:image/png;base64," + buf.toString("base64");
+}
+
+export async function buildKeyImageFrames(rawFrames: RawGifFrame[], logoMode: LogoMode = "icon"): Promise<KeyFrame[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let logo: any = null;
+  if (logoMode !== "none") {
+    const logoPath = logoMode === "logo" ? LOGO_PATH_TEXT : LOGO_PATH;
+    const logoWidth = logoMode === "logo" ? LOGO_WIDTH_TEXT : LOGO_WIDTH;
+    logo = await Jimp.read(logoPath);
+    logo.resize({ w: logoWidth });
+  }
+
+  const result: KeyFrame[] = [];
+  for (const frame of rawFrames) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const base: any = Jimp.fromBitmap({ data: frame.pixels, width: frame.width, height: frame.height });
+    base.cover({ w: KEY_SIZE, h: KEY_SIZE });
+    if (logo) base.composite(logo, 2, KEY_SIZE - logo.height - 2);
+    const buf = await base.getBuffer("image/png");
+    result.push({ png: "data:image/png;base64," + buf.toString("base64"), delay: frame.delay });
+  }
+
+  return result;
 }
