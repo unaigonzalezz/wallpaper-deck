@@ -9,6 +9,12 @@
   </head>
 
   <body>
+    <div id="previewRow" style="display: none">
+      <sdpi-item>
+        <img id="previewImg" src="" alt="" />
+      </sdpi-item>
+    </div>
+
     <details id="advancedSection">
       <summary>Advanced</summary>
 
@@ -130,6 +136,16 @@
 
         client.sendToPropertyInspector.subscribe(function (msg) {
           var payload = (msg && msg.payload) || {};
+
+          if (payload.event === "previewImage") {
+            var row = document.getElementById("previewRow");
+            if (payload.image) {
+              document.getElementById("previewImg").src = payload.image;
+              row.style.display = "";
+            } else {
+              row.style.display = "none";
+            }
+          }
 
           if (payload.event === "detectedPaths") {
             applyDetectedPaths(payload.enginePath, payload.basePath);

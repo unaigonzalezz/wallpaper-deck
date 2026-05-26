@@ -15,6 +15,7 @@ import { DEFAULT_BASE, DEFAULT_ENGINE, DETECTED } from "../const/const";
 import { buildKeyImage, buildKeyImageFrames, type KeyFrame, LogoMode } from "../utils/buildKeyImage";
 import { parseGifFrames } from "../utils/parseGifFrames";
 import { wrapTitle } from "../utils/wrapTitle";
+import { getPreviewBase64 } from "../utils/getPreviewBase64";
 
 type WallpaperSettings = {
   wallpaperId?: string;
@@ -189,23 +190,6 @@ export class WallpaperChange extends SingletonAction<WallpaperSettings> {
       streamDeck.logger.error(`onSendToPlugin error: ${e}`);
     }
   }
-}
-
-function getPreviewBase64(basePath: string, wallpaperId: string): string | null {
-  const dir = join(basePath, wallpaperId);
-  for (const ext of ["jpg", "jpeg", "png", "gif"]) {
-    const filePath = join(dir, `preview.${ext}`);
-    if (existsSync(filePath)) {
-      try {
-        const data = readFileSync(filePath);
-        const mime = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : `image/${ext}`;
-        return `data:${mime};base64,${data.toString("base64")}`;
-      } catch (e) {
-        streamDeck.logger.error(`Error reading preview file ${filePath}: ${e}`);
-      }
-    }
-  }
-  return null;
 }
 
 function listWallpapers(basePath: string): { id: string; title: string }[] {

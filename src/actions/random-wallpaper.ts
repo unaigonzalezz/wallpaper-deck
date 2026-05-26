@@ -61,6 +61,7 @@ export class RandomWallpaper extends SingletonAction<RandomWallpaperSettings> {
 
     streamDeck.logger.info(`Random wallpaper picked: ${picked.title} (${picked.id})`);
 
+    const previewImage = getPreviewBase64(basePath, picked.id);
     const action = ev.action;
     execFile(enginePath, ["-control", "openWallpaper", "-file", projectFile], (err) => {
       if (err) {
@@ -69,6 +70,7 @@ export class RandomWallpaper extends SingletonAction<RandomWallpaperSettings> {
       } else {
         streamDeck.logger.info(`Wallpaper changed to: ${picked.id}`);
         action.showOk();
+        streamDeck.ui.sendToPropertyInspector({ event: "previewImage", image: previewImage }).catch(() => {});
       }
     });
   }
@@ -96,6 +98,23 @@ export class RandomWallpaper extends SingletonAction<RandomWallpaperSettings> {
       streamDeck.logger.error(`onSendToPlugin error: ${e}`);
     }
   }
+}
+
+function getPreviewBase64(basePath: string, wallpaperId: string): string | null {
+  const dir = join(basePath, wallpaperId);
+  for (const ext of ["jpg", "jpeg", "png", "gif"]) {
+    const filePath = join(dir, `preview.${ext}`);
+    if (existsSync(filePath)) {
+      try {
+        const data = readFileSync(filePath);
+        const mime = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : `image/${ext}`;
+        return `data:${mime};base64,${data.toString("base64")}`;
+      } catch (e) {
+        streamDeck.logger.error(`Error reading preview file ${filePath}: ${e}`);
+      }
+    }
+  }
+  return null;
 }
 
 function listWallpapers(basePath: string): { id: string; title: string }[] {
