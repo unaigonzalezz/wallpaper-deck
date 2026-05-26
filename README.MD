@@ -31,6 +31,8 @@
 
 - **Instant wallpaper switching** — press a key, change your wallpaper.
 - **Wallpaper preview on the button** — the key image shows the actual preview thumbnail of the wallpaper assigned to it.
+- **Animated previews** — GIF wallpapers animate directly on the Stream Deck key. Can be toggled off per action.
+- **Random wallpaper** — pick a random wallpaper from your entire collection with a single press. The property inspector shows the last picked wallpaper's preview.
 - **Auto-detects your installation** — finds Wallpaper Engine and your Steam Workshop folder automatically via the Windows registry. No manual path configuration needed in most cases.
 - **Works on Windows 10 and 11.**
 
@@ -43,6 +45,16 @@
 > _One press. One wallpaper._
 
 Assigns a Wallpaper Engine wallpaper to a Stream Deck key. Pressing the key instantly activates that wallpaper on your desktop. The key displays the wallpaper's preview thumbnail so you always know what each button does at a glance.
+
+Supports animated GIF previews on the key — toggle the **Animate** setting to disable it if you prefer a static thumbnail.
+
+---
+
+### Random Wallpaper
+
+> _One press. Random wallpaper._
+
+Picks a random wallpaper from your Steam Workshop collection and activates it immediately. Each time you press the key a different wallpaper is selected.
 
 ---
 
@@ -63,9 +75,10 @@ Get the latest release from the [Stream Deck Marketplace](https://marketplace.el
 ## Setup
 
 1. **Install the plugin** from the Stream Deck Marketplace or from the Releases page.
-2. **Drag the "Change Wallpaper" action** onto any key on your Stream Deck.
-3. **Select a wallpaper** from the dropdown — your installed wallpapers will be listed automatically.
-4. **Press the key** to activate the wallpaper.
+2. **Drag an action** onto any key on your Stream Deck:
+   - **Change Wallpaper** — select a specific wallpaper from the dropdown.
+   - **Random Wallpaper** — activates a random wallpaper from your collection on each press.
+3. **Press the key** to activate the wallpaper.
 
 > **Note:** Wallpaper Deck auto-detects Wallpaper Engine and your Steam Workshop folder on first use. If detection fails, the Advanced section in the property inspector lets you set the paths manually.
 
@@ -86,8 +99,7 @@ If you can't donate, leaving a ⭐ on the repo goes a long way — it genuinely 
 ## Future improvements
 
 - Support for multiple monitors and monitor-specific wallpaper switching.
-- Playlist / random wallpaper mode — cycle through a set of wallpapers on a timer or key press.
-- Animated preview thumbnails for video wallpapers.
+- Playlist mode — cycle through a curated set of wallpapers on a timer or key press.
 
 Feel free to suggest new features in the Discussions tab.
 
