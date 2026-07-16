@@ -15,6 +15,33 @@
       </sdpi-item>
     </div>
 
+    <sdpi-item label="Monitor">
+      <div class="field-row">
+        <sdpi-select setting="monitorMode" default-value="default">
+          <option value="default">Default monitor</option>
+          <option value="specific">Specific monitor</option>
+          <option value="all">Clone to all monitors</option>
+        </sdpi-select>
+        <span
+          class="tip"
+          data-tip="'Specific monitor' opens the wallpaper only on the screen you pick below. 'Clone to all monitors' opens the same wallpaper independently on every detected screen. IMPORTANT: both require Wallpaper Engine's own display mode to already be set to 'Wallpaper per monitor' (in the Wallpaper Engine app: monitor icon → Choose Monitor → Wallpaper per monitor). If it's set to 'Stretch single wallpaper' or 'Clone single wallpaper' instead, the key will show an error and the wallpaper won't change, switch that setting manually in Wallpaper Engine first, since there's no command-line way for this plugin to do it for you. Stretching ONE wallpaper across all monitors ('Stretch single wallpaper') is also only configurable inside Wallpaper Engine itself."
+          ><span class="material-symbols--info-outline-rounded"></span
+        ></span>
+      </div>
+    </sdpi-item>
+
+    <div id="monitorPickerRow" style="display: none">
+      <sdpi-item label="Target Monitor">
+        <sdpi-select
+          setting="monitorIndex"
+          datasource="getMonitors"
+          hot-reload
+          show-refresh
+          placeholder="Select a monitor…"
+        ></sdpi-select>
+      </sdpi-item>
+    </div>
+
     <details id="advancedSection">
       <summary>Advanced</summary>
 
@@ -127,7 +154,17 @@
           }
         }
 
+        function updateMonitorPickerVisibility(mode) {
+          document.getElementById("monitorPickerRow").style.display = mode === "specific" ? "" : "none";
+        }
+
+        document.querySelector('sdpi-select[setting="monitorMode"]').addEventListener("valuechange", function (e) {
+          updateMonitorPickerVisibility(e.target.value);
+        });
+
         client.didReceiveSettings.subscribe(function (data) {
+          var s = (data.payload && data.payload.settings) || {};
+          updateMonitorPickerVisibility(s.monitorMode || "default");
           if (!detectedPathsRequested) {
             detectedPathsRequested = true;
             client.send("sendToPlugin", { event: "getDetectedPaths" });
