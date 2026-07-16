@@ -59,9 +59,7 @@ Picks a random wallpaper from your Steam Workshop collection and activates it im
 
 ---
 
-### Monitor selection
-
-> _Choose where the wallpaper goes._
+#### Monitor selection
 
 Both actions include a **Monitor** setting with three modes:
 
