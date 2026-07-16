@@ -12,19 +12,32 @@ import { execFile } from "child_process";
 import { existsSync, readdirSync, readFileSync } from "fs";
 import { join } from "path";
 import { DEFAULT_BASE, DEFAULT_ENGINE, DETECTED } from "../const/const";
-import { buildKeyImage, buildKeyImageFrames, type KeyFrame, LogoMode } from "../utils/buildKeyImage";
+import {
+  buildKeyImage,
+  buildKeyImageFrames,
+  LogoMode,
+  migrateLogoMode,
+  MonitorMode,
+  OverlayDisplayMode,
+  type KeyFrame,
+} from "../utils/buildKeyImage";
+import { getPreviewBase64 } from "../utils/getPreviewBase64";
+import { listMonitors } from "../utils/listMonitors";
 import { parseGifFrames } from "../utils/parseGifFrames";
 import { wrapTitle } from "../utils/wrapTitle";
-import { getPreviewBase64 } from "../utils/getPreviewBase64";
 
 type WallpaperSettings = {
   wallpaperId?: string;
   wallpaperTitle?: string;
   wallpaperEnginePath?: string;
   wallpaperBasePath?: string;
+  /** @deprecated replaced by overlayDisplayMode, kept for migrating existing settings */
   logoMode?: LogoMode;
+  overlayDisplayMode?: OverlayDisplayMode;
   showTitle?: boolean;
   animate?: boolean;
+  monitorMode?: MonitorMode;
+  monitorIndex?: string;
 };
 
 type PluginMessage = {
@@ -50,6 +63,12 @@ export class WallpaperChange extends SingletonAction<WallpaperSettings> {
     return this.settingsCache.get(id)?.wallpaperEnginePath || DEFAULT_ENGINE;
   }
 
+  private resolveOverlayDisplayModeSetting(settings: WallpaperSettings): OverlayDisplayMode {
+    if (settings.overlayDisplayMode) return settings.overlayDisplayMode;
+    if (settings.logoMode) return migrateLogoMode(settings.logoMode);
+    return "logo-monitor";
+  }
+
   private stopAnimation(actionId: string): void {
     const timer = this.animationTimers.get(actionId);
     if (timer !== undefined) {
@@ -58,11 +77,7 @@ export class WallpaperChange extends SingletonAction<WallpaperSettings> {
     }
   }
 
-  private startAnimation(
-    actionId: string,
-    setImage: (png: string) => Promise<void>,
-    frames: KeyFrame[],
-  ): void {
+  private startAnimation(actionId: string, setImage: (png: string) => Promise<void>, frames: KeyFrame[]): void {
     this.stopAnimation(actionId);
     let frameIndex = 0;
 
@@ -82,9 +97,10 @@ export class WallpaperChange extends SingletonAction<WallpaperSettings> {
     setImage: (png: string) => Promise<void>,
     settings: WallpaperSettings,
   ): Promise<void> {
-    const { wallpaperId, logoMode, animate } = settings;
+    const { wallpaperId, animate, monitorMode, monitorIndex } = settings;
     if (!wallpaperId) return;
 
+    const overlayDisplayMode = this.resolveOverlayDisplayModeSetting(settings);
     const preview = getPreviewBase64(this.getCachedBasePath(actionId), wallpaperId);
 
     this.stopAnimation(actionId);
@@ -93,17 +109,25 @@ export class WallpaperChange extends SingletonAction<WallpaperSettings> {
       const raw = Buffer.from(preview.split(",")[1], "base64");
       const rawFrames = parseGifFrames(raw);
       if (rawFrames) {
-        const frames = await buildKeyImageFrames(rawFrames, logoMode ?? "logo");
+        const frames = await buildKeyImageFrames(rawFrames, overlayDisplayMode, monitorMode, monitorIndex);
         this.startAnimation(actionId, setImage, frames);
         return;
       }
     }
 
-    await setImage(await buildKeyImage(preview, logoMode ?? "logo"));
+    await setImage(await buildKeyImage(preview, overlayDisplayMode, monitorMode, monitorIndex));
+  }
+
+  private openWallpaper(enginePath: string, projectFile: string, monitorIndex?: number): Promise<void> {
+    const args = ["-control", "openWallpaper", "-file", projectFile];
+    if (monitorIndex !== undefined) args.push("-monitor", String(monitorIndex));
+    return new Promise((resolve, reject) => {
+      execFile(enginePath, args, (err) => (err ? reject(err) : resolve()));
+    });
   }
 
   override async onKeyDown(ev: KeyDownEvent<WallpaperSettings>): Promise<void> {
-    const { wallpaperId } = ev.payload.settings;
+    const { wallpaperId, monitorMode, monitorIndex } = ev.payload.settings;
     this.cacheSettings(ev.action.id, ev.payload.settings);
 
     if (!wallpaperId) {
@@ -124,22 +148,36 @@ export class WallpaperChange extends SingletonAction<WallpaperSettings> {
       return;
     }
 
-    const action = ev.action;
-    execFile(enginePath, ["-control", "openWallpaper", "-file", projectFile], (err) => {
-      if (err) {
-        streamDeck.logger.error(`Wallpaper change failed: ${err.message}`);
-        action.showAlert();
+    try {
+      if (monitorMode === "specific" && monitorIndex !== undefined) {
+        await this.openWallpaper(enginePath, projectFile, Number(monitorIndex));
+      } else if (monitorMode === "all") {
+        const monitors = await listMonitors();
+        if (monitors.length === 0) {
+          await this.openWallpaper(enginePath, projectFile);
+        } else {
+          await Promise.all(monitors.map((m) => this.openWallpaper(enginePath, projectFile, m.index)));
+        }
       } else {
-        streamDeck.logger.info(`Wallpaper changed: ${wallpaperId}`);
-        ev.action.showOk();
+        await this.openWallpaper(enginePath, projectFile);
       }
-    });
+      streamDeck.logger.info(`Wallpaper changed: ${wallpaperId}`);
+      await ev.action.showOk();
+    } catch (e) {
+      streamDeck.logger.error(`Wallpaper change failed: ${e}`);
+      await ev.action.showAlert();
+    }
   }
 
   override async onWillAppear(ev: WillAppearEvent<WallpaperSettings>): Promise<void> {
     const settings = ev.payload.settings;
     if (settings.animate === undefined) {
       await ev.action.setSettings({ ...settings, animate: true });
+      return;
+    }
+    if (!settings.overlayDisplayMode && settings.logoMode) {
+      const { logoMode, ...rest } = settings;
+      await ev.action.setSettings({ ...rest, overlayDisplayMode: migrateLogoMode(logoMode) });
       return;
     }
     this.cacheSettings(ev.action.id, settings);
@@ -185,6 +223,13 @@ export class WallpaperChange extends SingletonAction<WallpaperSettings> {
         const basePath = this.getCachedBasePath(ev.action.id);
         const image = getPreviewBase64(basePath, msg.wallpaperId);
         await streamDeck.ui.sendToPropertyInspector({ event: "previewImage", image });
+      } else if (msg.event === "getMonitors") {
+        const monitors = await listMonitors();
+        const items = monitors.map((m) => ({
+          label: `Monitor ${m.index + 1}${m.name ? ` - ${m.name}` : ""}${m.primary ? " (Primary)" : ""}, ${m.width}x${m.height}`,
+          value: String(m.index),
+        }));
+        await streamDeck.ui.sendToPropertyInspector({ event: "getMonitors", items });
       }
     } catch (e) {
       streamDeck.logger.error(`onSendToPlugin error: ${e}`);

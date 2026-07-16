@@ -11,10 +11,14 @@ import { execFile } from "child_process";
 import { existsSync, readdirSync, readFileSync } from "fs";
 import { join } from "path";
 import { DEFAULT_BASE, DEFAULT_ENGINE, DETECTED } from "../const/const";
+import type { MonitorMode } from "../utils/buildKeyImage";
+import { listMonitors } from "../utils/listMonitors";
 
 type RandomWallpaperSettings = {
   wallpaperEnginePath?: string;
   wallpaperBasePath?: string;
+  monitorMode?: MonitorMode;
+  monitorIndex?: string;
 };
 
 type PluginMessage = {
@@ -37,9 +41,18 @@ export class RandomWallpaper extends SingletonAction<RandomWallpaperSettings> {
     return this.settingsCache.get(id)?.wallpaperEnginePath || DEFAULT_ENGINE;
   }
 
+  private openWallpaper(enginePath: string, projectFile: string, monitorIndex?: number): Promise<void> {
+    const args = ["-control", "openWallpaper", "-file", projectFile];
+    if (monitorIndex !== undefined) args.push("-monitor", String(monitorIndex));
+    return new Promise((resolve, reject) => {
+      execFile(enginePath, args, (err) => (err ? reject(err) : resolve()));
+    });
+  }
+
   override async onKeyDown(ev: KeyDownEvent<RandomWallpaperSettings>): Promise<void> {
     this.cacheSettings(ev.action.id, ev.payload.settings);
 
+    const { monitorMode, monitorIndex } = ev.payload.settings;
     const enginePath = this.getCachedEnginePath(ev.action.id);
     const basePath = this.getCachedBasePath(ev.action.id);
 
@@ -62,17 +75,27 @@ export class RandomWallpaper extends SingletonAction<RandomWallpaperSettings> {
     streamDeck.logger.info(`Random wallpaper picked: ${picked.title} (${picked.id})`);
 
     const previewImage = getPreviewBase64(basePath, picked.id);
-    const action = ev.action;
-    execFile(enginePath, ["-control", "openWallpaper", "-file", projectFile], (err) => {
-      if (err) {
-        streamDeck.logger.error(`Random wallpaper change failed: ${err.message}`);
-        action.showAlert();
+
+    try {
+      if (monitorMode === "specific" && monitorIndex !== undefined) {
+        await this.openWallpaper(enginePath, projectFile, Number(monitorIndex));
+      } else if (monitorMode === "all") {
+        const monitors = await listMonitors();
+        if (monitors.length === 0) {
+          await this.openWallpaper(enginePath, projectFile);
+        } else {
+          await Promise.all(monitors.map((m) => this.openWallpaper(enginePath, projectFile, m.index)));
+        }
       } else {
-        streamDeck.logger.info(`Wallpaper changed to: ${picked.id}`);
-        action.showOk();
-        streamDeck.ui.sendToPropertyInspector({ event: "previewImage", image: previewImage }).catch(() => {});
+        await this.openWallpaper(enginePath, projectFile);
       }
-    });
+      streamDeck.logger.info(`Wallpaper changed to: ${picked.id}`);
+      await ev.action.showOk();
+      streamDeck.ui.sendToPropertyInspector({ event: "previewImage", image: previewImage }).catch(() => {});
+    } catch (e) {
+      streamDeck.logger.error(`Random wallpaper change failed: ${e}`);
+      await ev.action.showAlert();
+    }
   }
 
   override onWillAppear(ev: WillAppearEvent<RandomWallpaperSettings>): void {
@@ -93,6 +116,13 @@ export class RandomWallpaper extends SingletonAction<RandomWallpaperSettings> {
           enginePath: DETECTED?.enginePath ?? null,
           basePath: DETECTED?.basePath ?? null,
         });
+      } else if (msg.event === "getMonitors") {
+        const monitors = await listMonitors();
+        const items = monitors.map((m) => ({
+          label: `Monitor ${m.index + 1}${m.name ? ` - ${m.name}` : ""}${m.primary ? " (Primary)" : ""}, ${m.width}x${m.height}`,
+          value: String(m.index),
+        }));
+        await streamDeck.ui.sendToPropertyInspector({ event: "getMonitors", items });
       }
     } catch (e) {
       streamDeck.logger.error(`onSendToPlugin error: ${e}`);
