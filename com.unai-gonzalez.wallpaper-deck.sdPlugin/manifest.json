@@ -34,6 +34,22 @@
           "TitleAlignment": "middle"
         }
       ]
+    },
+    {
+      "Name": "Load playlist",
+      "UUID": "com.unai-gonzalez.wallpaper-deck.load-playlist",
+      "Icon": "imgs/actions/load-playlist/icon",
+      "Tooltip": "Loads and applies a saved Wallpaper Engine playlist.",
+      "PropertyInspectorPath": "ui/load-playlist.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/load-playlist/key",
+          "TitleAlignment": "middle"
+        }
+      ]
     }
   ],
   "Category": "Wallpaper Deck",
