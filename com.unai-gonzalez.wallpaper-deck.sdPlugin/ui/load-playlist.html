@@ -1,0 +1,290 @@
+<!doctype html>
+<html>
+  <head lang="en">
+    <title>Load Playlist Settings</title>
+    <meta charset="utf-8" />
+    <script src="./shared/sdpi-components.js"></script>
+    <link rel="stylesheet" href="./styles/styles.css" />
+    <link rel="stylesheet" href="./styles/icons.css" />
+  </head>
+
+  <body>
+    <sdpi-item label="Playlist">
+      <sdpi-select
+        setting="playlistName"
+        datasource="getPlaylists"
+        hot-reload
+        show-refresh
+        placeholder="Select a playlist…"
+      ></sdpi-select>
+    </sdpi-item>
+
+    <div id="playlistItemsSection" style="display: none">
+      <sdpi-item label="Playlist order">
+        <div class="field-row">
+          <span id="playlistTiming" class="playlist-path">Wallpapers, in playback order</span>
+          <span
+            class="tip"
+            data-tip="This list is read-only, just a preview of what's saved in the playlist. To add, remove or reorder wallpapers, or to change the switch timing, edit the playlist itself inside Wallpaper Engine (Wallpaper → Playlists)."
+            ><span class="material-symbols--info-outline-rounded"></span
+          ></span>
+        </div>
+      </sdpi-item>
+      <div id="playlistItemsList" class="playlist-items"></div>
+    </div>
+
+    <sdpi-item label="Title">
+      <sdpi-checkbox setting="showTitle" label="Show playlist name"></sdpi-checkbox>
+    </sdpi-item>
+
+    <sdpi-item label="Overlay display mode">
+      <sdpi-select setting="overlayDisplayMode" default-value="logo-monitor">
+        <option value="logo-monitor">Logo + Monitor mode</option>
+        <option value="monitor">Monitor mode</option>
+        <option value="logo">Logo</option>
+        <option value="none">Nothing</option>
+      </sdpi-select>
+    </sdpi-item>
+
+    <sdpi-item label="Monitor">
+      <div class="field-row">
+        <sdpi-select setting="monitorMode" default-value="default">
+          <option value="default">Default monitor</option>
+          <option value="specific">Specific monitor</option>
+          <option value="all">Clone to all monitors</option>
+        </sdpi-select>
+        <span
+          class="tip"
+          data-tip="'Specific monitor' loads the playlist only on the screen you pick below. 'Clone to all monitors' loads the same playlist independently on every detected screen. IMPORTANT: both require Wallpaper Engine's own display mode to already be set to 'Wallpaper per monitor' (in the Wallpaper Engine app: monitor icon → Choose Monitor → Wallpaper per monitor). If it's set to 'Stretch single wallpaper' or 'Clone single wallpaper' instead, the key will show an error and the playlist won't load, switch that setting manually in Wallpaper Engine first, since there's no command-line way for this plugin to do it for you."
+          ><span class="material-symbols--info-outline-rounded"></span
+        ></span>
+      </div>
+    </sdpi-item>
+
+    <div id="monitorPickerRow" style="display: none">
+      <sdpi-item label="Target Monitor">
+        <sdpi-select
+          setting="monitorIndex"
+          datasource="getMonitors"
+          hot-reload
+          show-refresh
+          placeholder="Select a monitor…"
+        ></sdpi-select>
+      </sdpi-item>
+    </div>
+
+    <details id="advancedSection">
+      <summary>Advanced</summary>
+
+      <sdpi-item label="Detected Engine">
+        <div class="field-row">
+          <span id="detectedEngine" class="detected-path">—</span>
+          <span
+            class="tip"
+            data-tip="Path to wallpaper64.exe found via the Steam registry. Used automatically when no override is set below."
+            ><span class="material-symbols--info-outline-rounded"></span
+          ></span>
+        </div>
+      </sdpi-item>
+
+      <sdpi-item label="Override Engine EXE">
+        <div class="field-row">
+          <sdpi-textfield setting="wallpaperEnginePath" placeholder="Leave empty to use auto-detected"></sdpi-textfield>
+          <span
+            class="tip"
+            data-tip="Custom path to wallpaper64.exe. Only needed if auto-detection failed or you have Wallpaper Engine in a non-standard location."
+            ><span class="material-symbols--info-outline-rounded"></span
+          ></span>
+        </div>
+      </sdpi-item>
+
+      <sdpi-item label="Detected Config Backups">
+        <div class="field-row">
+          <span id="detectedConfigBackups" class="detected-path">—</span>
+          <span
+            class="tip"
+            data-tip="Folder where Wallpaper Engine stores dated backups of its config (config_YYYY-MM-DD.json), found next to wallpaper64.exe. Playlists are read from the most recent backup file in this folder."
+            ><span class="material-symbols--info-outline-rounded"></span
+          ></span>
+        </div>
+      </sdpi-item>
+
+      <sdpi-item label="Override Config Backups">
+        <div class="field-row">
+          <sdpi-textfield setting="configBackupsPath" placeholder="Leave empty to use auto-detected"></sdpi-textfield>
+          <span
+            class="tip"
+            data-tip="Custom path to the config_backups folder. Only needed if auto-detection failed or Wallpaper Engine is in a non-standard location."
+            ><span class="material-symbols--info-outline-rounded"></span
+          ></span>
+        </div>
+      </sdpi-item>
+    </details>
+
+    <sdpi-item label="Support">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; flex-direction: row; gap: 8px">
+          <a
+            style="cursor: pointer"
+            onclick="SDPIComponents.streamDeckClient.send('openUrl', { url: 'https://ko-fi.com/X8X4LBFTT' })"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img height="30" style="border: 0; height: 30px" src="./img/kofi.png" alt="Buy me a coffee on Ko-fi" />
+          </a>
+
+          <a
+            style="cursor: pointer"
+            onclick="
+              SDPIComponents.streamDeckClient.send('openUrl', {
+                url: 'https://github.com/unaigonzalezz/wallpaper-deck',
+              })
+            "
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img height="30" style="border: 0; height: 30px" src="./img/star.png" alt="Star this project on GitHub" />
+          </a>
+        </div>
+
+        <p style="margin: 0; font-size: 12px; line-height: 1.4; color: var(--sdpi-color)">
+          If you enjoy this project, you can support its development by buying me a coffee ☕ or starring the project on
+          GitHub ⭐.
+        </p>
+
+        <p style="margin: 0; font-size: 12px; line-height: 1.4; color: var(--sdpi-color)">
+          Every coffee and every star helps me continue improving the plugin, adding new features, and maintaining
+          future updates.
+        </p>
+      </div>
+    </sdpi-item>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        var client = SDPIComponents.streamDeckClient;
+        var detectedPathsRequested = false;
+        var prevPlaylistName;
+
+        function requestPlaylistItems(playlistName) {
+          client.send("sendToPlugin", { event: "getPlaylistItems", playlistName: playlistName });
+        }
+
+        function formatMinutes(totalMinutes) {
+          var hours = Math.floor(totalMinutes / 60);
+          var minutes = totalMinutes % 60;
+          return hours + "h " + minutes + "m";
+        }
+
+        function formatTiming(settings) {
+          if (!settings || settings.mode !== "timer" || !settings.delay) {
+            return "Wallpapers, in playback order";
+          }
+          var order = settings.order === "random" ? ", random order" : "";
+          return "Switches every " + formatMinutes(settings.delay) + order;
+        }
+
+        function renderPlaylistItems(items, settings) {
+          var section = document.getElementById("playlistItemsSection");
+          var list = document.getElementById("playlistItemsList");
+          var timing = document.getElementById("playlistTiming");
+          list.innerHTML = "";
+
+          if (!items || items.length === 0) {
+            section.style.display = "none";
+            return;
+          }
+
+          timing.textContent = formatTiming(settings);
+
+          items.forEach(function (item, index) {
+            var row = document.createElement("div");
+            row.className = "playlist-item-row";
+
+            var num = document.createElement("span");
+            num.className = "playlist-item-num";
+            num.textContent = index + 1 + ".";
+
+            var thumb = document.createElement("img");
+            thumb.className = "playlist-item-thumb";
+            thumb.src = item.preview || "";
+            thumb.alt = "";
+            if (!item.preview) thumb.style.visibility = "hidden";
+
+            var title = document.createElement("span");
+            title.className = "playlist-item-title";
+            title.textContent = item.title;
+
+            row.appendChild(num);
+            row.appendChild(thumb);
+            row.appendChild(title);
+            list.appendChild(row);
+          });
+
+          section.style.display = "";
+        }
+
+        function applyDetectedPaths(enginePath, configBackupsPath) {
+          var elEngine = document.getElementById("detectedEngine");
+          var elBackups = document.getElementById("detectedConfigBackups");
+
+          if (enginePath) {
+            elEngine.textContent = enginePath;
+            elEngine.className = "detected-path found";
+          } else {
+            elEngine.textContent = "Not detected";
+            elEngine.className = "detected-path missing";
+          }
+
+          if (configBackupsPath) {
+            elBackups.textContent = configBackupsPath;
+            elBackups.className = "detected-path found";
+          } else {
+            elBackups.textContent = "Not detected";
+            elBackups.className = "detected-path missing";
+          }
+        }
+
+        function updateMonitorPickerVisibility(mode) {
+          document.getElementById("monitorPickerRow").style.display = mode === "specific" ? "" : "none";
+        }
+
+        document.querySelector('sdpi-select[setting="monitorMode"]').addEventListener("valuechange", function (e) {
+          updateMonitorPickerVisibility(e.target.value);
+        });
+
+        document.querySelector('sdpi-select[setting="playlistName"]').addEventListener("valuechange", function (e) {
+          var name = e.target.value;
+          if (name) {
+            prevPlaylistName = name;
+            requestPlaylistItems(name);
+          }
+        });
+
+        client.didReceiveSettings.subscribe(function (data) {
+          var s = (data.payload && data.payload.settings) || {};
+          updateMonitorPickerVisibility(s.monitorMode || "default");
+          if (s.playlistName && s.playlistName !== prevPlaylistName) {
+            prevPlaylistName = s.playlistName;
+            requestPlaylistItems(s.playlistName);
+          }
+          if (!detectedPathsRequested) {
+            detectedPathsRequested = true;
+            client.send("sendToPlugin", { event: "getDetectedPaths" });
+          }
+        });
+
+        client.sendToPropertyInspector.subscribe(function (msg) {
+          var payload = (msg && msg.payload) || {};
+
+          if (payload.event === "detectedPaths") {
+            applyDetectedPaths(payload.enginePath, payload.configBackupsPath);
+          }
+
+          if (payload.event === "getPlaylistItems") {
+            renderPlaylistItems(payload.items, payload.settings);
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

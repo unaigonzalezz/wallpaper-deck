@@ -53,7 +53,7 @@ function getMonitorBadgePath(monitorMode?: MonitorMode, monitorIndex?: string): 
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function loadMonitorBadge(
+export async function loadMonitorBadge(
   showMonitorBadge: boolean,
   monitorMode?: MonitorMode,
   monitorIndex?: string,
