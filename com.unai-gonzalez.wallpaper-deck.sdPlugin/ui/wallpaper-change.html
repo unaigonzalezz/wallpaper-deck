@@ -15,15 +15,29 @@
       </sdpi-item>
     </div>
 
+    <sdpi-item label="Search">
+      <sdpi-textfield id="wallpaperSearch" placeholder="Search wallpapers…"></sdpi-textfield>
+    </sdpi-item>
+
     <sdpi-item label="Wallpaper">
-      <sdpi-select
-        setting="wallpaperId"
-        label-setting="wallpaperTitle"
-        datasource="getWallpapers"
-        hot-reload
-        show-refresh
-        placeholder="Select a wallpaper…"
-      ></sdpi-select>
+      <div class="field-row">
+        <sdpi-select
+          setting="wallpaperId"
+          label-setting="wallpaperTitle"
+          datasource="getWallpapers"
+          hot-reload
+          show-refresh
+          placeholder="Select a wallpaper…"
+        ></sdpi-select>
+        <span id="favoriteToggle" class="favorite-star disabled" title="Mark as favorite (shown first)">
+          <span class="material-symbols--family-star-outline"></span>
+        </span>
+        <span
+          class="tip"
+          data-tip="Favorites here are local to this plugin and independent from the ones you mark in the app, since those depend on Steam."
+          ><span class="material-symbols--info-outline-rounded"></span
+        ></span>
+      </div>
     </sdpi-item>
 
     <sdpi-item label="Title">
@@ -158,11 +172,25 @@
     <script>
       document.addEventListener("DOMContentLoaded", function () {
         var client = SDPIComponents.streamDeckClient;
+        var wallpaperSelect = document.querySelector('sdpi-select[setting="wallpaperId"]');
         var prevWallpaperId;
+        var currentWallpaperId;
         var detectedPathsRequested = false;
+        var searchDebounceTimer;
 
         function requestPreview(wallpaperId) {
           client.send("sendToPlugin", { event: "getPreview", wallpaperId: wallpaperId });
+        }
+
+        function requestFavoriteStatus(wallpaperId) {
+          client.send("sendToPlugin", { event: "getFavoriteStatus", wallpaperId: wallpaperId });
+        }
+
+        function setFavoriteButtonState(isFavorite, enabled) {
+          var btn = document.getElementById("favoriteToggle");
+          btn.classList.toggle("is-favorite", !!isFavorite);
+          btn.classList.toggle("disabled", !enabled);
+          btn.title = isFavorite ? "Remove from favorites" : "Mark as favorite (shown first)";
         }
 
         function applyDetectedPaths(enginePath, basePath) {
@@ -190,11 +218,15 @@
           document.getElementById("monitorPickerRow").style.display = mode === "specific" ? "" : "none";
         }
 
-        document.querySelector("sdpi-select").addEventListener("valuechange", function (e) {
+        wallpaperSelect.addEventListener("valuechange", function (e) {
           var id = e.target.value;
+          currentWallpaperId = id || undefined;
           if (id) {
             prevWallpaperId = id;
             requestPreview(id);
+            requestFavoriteStatus(id);
+          } else {
+            setFavoriteButtonState(false, false);
           }
         });
 
@@ -202,11 +234,27 @@
           updateMonitorPickerVisibility(e.target.value);
         });
 
+        document.getElementById("wallpaperSearch").addEventListener("valuechange", function (e) {
+          var query = e.target.value || "";
+          clearTimeout(searchDebounceTimer);
+          searchDebounceTimer = setTimeout(function () {
+            client.send("sendToPlugin", { event: "searchWallpapers", query: query });
+            wallpaperSelect.refresh();
+          }, 200);
+        });
+
+        document.getElementById("favoriteToggle").addEventListener("click", function () {
+          if (!currentWallpaperId) return;
+          client.send("sendToPlugin", { event: "toggleFavorite", wallpaperId: currentWallpaperId });
+        });
+
         client.didReceiveSettings.subscribe(function (data) {
           var s = (data.payload && data.payload.settings) || {};
           if (s.wallpaperId && s.wallpaperId !== prevWallpaperId) {
             prevWallpaperId = s.wallpaperId;
+            currentWallpaperId = s.wallpaperId;
             requestPreview(s.wallpaperId);
+            requestFavoriteStatus(s.wallpaperId);
           }
           updateMonitorPickerVisibility(s.monitorMode || "default");
           if (!detectedPathsRequested) {
@@ -230,6 +278,13 @@
 
           if (payload.event === "detectedPaths") {
             applyDetectedPaths(payload.enginePath, payload.basePath);
+          }
+
+          if (payload.event === "favoriteStatus" && payload.wallpaperId === currentWallpaperId) {
+            setFavoriteButtonState(payload.isFavorite, true);
+            if (payload.toggled) {
+              wallpaperSelect.refresh();
+            }
           }
         });
       });

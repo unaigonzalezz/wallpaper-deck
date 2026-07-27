@@ -44,15 +44,40 @@ type PluginMessage = {
   event: string;
   wallpaperId?: string;
   basePath?: string;
+  query?: string;
+  isRefresh?: boolean;
+};
+
+type GlobalPluginSettings = {
+  favoriteWallpaperIds?: string[];
 };
 
 @action({ UUID: "com.unai-gonzalez.wallpaper-deck.change-wallpaper" })
 export class WallpaperChange extends SingletonAction<WallpaperSettings> {
   private readonly settingsCache = new Map<string, WallpaperSettings>();
   private readonly animationTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly searchCache = new Map<string, string>();
 
   private cacheSettings(id: string, settings: WallpaperSettings): void {
     this.settingsCache.set(id, settings);
+  }
+
+  private async getFavoriteIds(): Promise<Set<string>> {
+    const g = await streamDeck.settings.getGlobalSettings<GlobalPluginSettings>();
+    return new Set(g.favoriteWallpaperIds ?? []);
+  }
+
+  private async toggleFavorite(wallpaperId: string): Promise<boolean> {
+    const g = await streamDeck.settings.getGlobalSettings<GlobalPluginSettings>();
+    const ids = new Set(g.favoriteWallpaperIds ?? []);
+    const isFavorite = !ids.has(wallpaperId);
+    if (isFavorite) {
+      ids.add(wallpaperId);
+    } else {
+      ids.delete(wallpaperId);
+    }
+    await streamDeck.settings.setGlobalSettings<GlobalPluginSettings>({ ...g, favoriteWallpaperIds: Array.from(ids) });
+    return isFavorite;
   }
 
   private getCachedBasePath(id: string): string {
@@ -214,11 +239,48 @@ export class WallpaperChange extends SingletonAction<WallpaperSettings> {
           basePath: DETECTED?.basePath ?? null,
         });
       } else if (msg.event === "getWallpapers") {
+        if (!msg.isRefresh) {
+          this.searchCache.delete(ev.action.id);
+        }
         const basePath = this.getCachedBasePath(ev.action.id);
+        const search = (this.searchCache.get(ev.action.id) || "").trim().toLowerCase();
         streamDeck.logger.info(`Loading wallpapers from: ${basePath}`);
-        const items = listWallpapers(basePath).map((w) => ({ label: w.title, value: w.id }));
+        const favorites = await this.getFavoriteIds();
+        let wallpapers = listWallpapers(basePath);
+        if (search) {
+          wallpapers = wallpapers.filter(
+            (w) => w.title.toLowerCase().includes(search) || w.id.toLowerCase().includes(search),
+          );
+        }
+        wallpapers.sort((a, b) => {
+          const aFav = favorites.has(a.id);
+          const bFav = favorites.has(b.id);
+          if (aFav !== bFav) return aFav ? -1 : 1;
+          return a.title.localeCompare(b.title);
+        });
+        const items = wallpapers.map((w) => ({
+          label: favorites.has(w.id) ? `★ ${w.title}` : w.title,
+          value: w.id,
+        }));
         streamDeck.logger.info(`Found ${items.length} wallpapers`);
         await streamDeck.ui.sendToPropertyInspector({ event: "getWallpapers", items });
+      } else if (msg.event === "searchWallpapers") {
+        this.searchCache.set(ev.action.id, msg.query ?? "");
+      } else if (msg.event === "getFavoriteStatus" && msg.wallpaperId) {
+        const favorites = await this.getFavoriteIds();
+        await streamDeck.ui.sendToPropertyInspector({
+          event: "favoriteStatus",
+          wallpaperId: msg.wallpaperId,
+          isFavorite: favorites.has(msg.wallpaperId),
+        });
+      } else if (msg.event === "toggleFavorite" && msg.wallpaperId) {
+        const isFavorite = await this.toggleFavorite(msg.wallpaperId);
+        await streamDeck.ui.sendToPropertyInspector({
+          event: "favoriteStatus",
+          wallpaperId: msg.wallpaperId,
+          isFavorite,
+          toggled: true,
+        });
       } else if (msg.event === "getPreview" && msg.wallpaperId) {
         const basePath = this.getCachedBasePath(ev.action.id);
         const image = getPreviewBase64(basePath, msg.wallpaperId);

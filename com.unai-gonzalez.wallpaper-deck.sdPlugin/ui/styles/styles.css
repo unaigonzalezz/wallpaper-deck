@@ -57,6 +57,31 @@
   width: 100%;
 }
 
+.favorite-star {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.1s, transform 0.1s;
+}
+.favorite-star:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+.favorite-star.is-favorite {
+  opacity: 1;
+}
+.favorite-star.disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+  transform: none;
+}
+
 .tip {
   position: relative;
   flex-shrink: 0;
