@@ -33,6 +33,8 @@
 - **Wallpaper preview on the button**, the key image shows the actual preview thumbnail of the wallpaper assigned to it.
 - **Animated previews**, GIF wallpapers animate directly on the Stream Deck key. Can be toggled off per action.
 - **Random wallpaper**, pick a random wallpaper from your entire collection with a single press. The property inspector shows the last picked wallpaper's preview.
+- **Playlist support**, load and activate a Wallpaper Engine playlist from a single key, with a combined preview of every wallpaper in it.
+- **Search and favorites**, filter the wallpaper list by title and mark your favorites so they always show up first. Favorites are stored locally by the plugin and are independent from the ones you mark inside Wallpaper Engine, since those depend on Steam.
 - **Multi-monitor support**, target the default monitor, a specific screen, or clone the wallpaper to every detected monitor, per action.
 - **Auto-detects your installation**, finds Wallpaper Engine and your Steam Workshop folder automatically via the Windows registry. No manual path configuration needed in most cases.
 - **Works on Windows 10 and 11.**
@@ -49,6 +51,18 @@ Assigns a Wallpaper Engine wallpaper to a Stream Deck key. Pressing the key inst
 
 Supports animated GIF previews on the key, toggle the **Animate** setting to disable it if you prefer a static thumbnail.
 
+The wallpaper dropdown includes a search field to filter by title, and a favorite toggle next to it. Favorites are shown first in the list and are stored locally by the plugin, independent from Steam.
+
+---
+
+### Load Playlist
+
+> _One press. Full playlist._
+
+Loads and activates a Wallpaper Engine playlist from a single key. The key shows a combined preview of the wallpapers in the playlist, and the playlist order is displayed as a read only reference in the property inspector.
+
+Playlists themselves (which wallpapers they contain, their order, and the switch timing) are managed inside Wallpaper Engine, under Wallpaper, Playlists.
+
 ---
 
 ### Random Wallpaper
@@ -61,7 +75,7 @@ Picks a random wallpaper from your Steam Workshop collection and activates it im
 
 #### Monitor selection
 
-Both actions include a **Monitor** setting with three modes:
+All actions include a **Monitor** setting with three modes:
 
 - **Default monitor**, activates the wallpaper using Wallpaper Engine's own default behavior.
 - **Specific monitor**, opens the wallpaper only on the screen you pick from the detected monitor list.
@@ -90,6 +104,7 @@ Get the latest release from the [Stream Deck Marketplace](https://marketplace.el
 1. **Install the plugin** from the Stream Deck Marketplace or from the Releases page.
 2. **Drag an action** onto any key on your Stream Deck:
    - **Change Wallpaper**, select a specific wallpaper from the dropdown.
+   - **Load Playlist**, select a Wallpaper Engine playlist from the dropdown.
    - **Random Wallpaper**, activates a random wallpaper from your collection on each press.
 3. **Press the key** to activate the wallpaper.
 
@@ -110,8 +125,6 @@ If you can't donate, leaving a ⭐ on the repo goes a long way, it genuinely mak
 ---
 
 ## Future improvements
-
-- Playlist mode, cycle through a curated set of wallpapers on a timer or key press.
 
 Feel free to suggest new features in the Discussions tab.
 
