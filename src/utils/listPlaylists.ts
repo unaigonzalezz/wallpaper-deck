@@ -31,10 +31,24 @@ function findLatestBackup(configBackupsPath: string): string | null {
   }
 }
 
+function isUserProfile(value: unknown): value is { general?: { playlists?: unknown } } {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && "general" in value;
+}
+
 function extractPlaylists(configFile: string): PlaylistInfo[] {
   const raw = JSON.parse(readFileSync(configFile, "utf-8"));
-  const userKey = Object.keys(raw).find((key) => !key.startsWith("?"));
-  if (!userKey) return [];
+
+  // Top-level keys are not always "the user profile vs. metadata prefixed with ?" -
+  // some installs also carry string metadata keys like "_installdirectory" that don't
+  // start with "?" either. Identify real user profiles by shape instead, and prefer
+  // whichever one actually has saved playlists (a config can hold multiple profiles,
+  // e.g. leftover "defaultuser..." placeholders alongside the real named user).
+  const userKeys = Object.keys(raw).filter((key) => isUserProfile(raw[key]));
+  if (userKeys.length === 0) return [];
+
+  const userKey =
+    userKeys.find((key) => Array.isArray(raw[key]?.general?.playlists) && raw[key].general.playlists.length > 0) ??
+    userKeys[0];
 
   const playlists = raw[userKey]?.general?.playlists;
   if (!Array.isArray(playlists)) return [];
