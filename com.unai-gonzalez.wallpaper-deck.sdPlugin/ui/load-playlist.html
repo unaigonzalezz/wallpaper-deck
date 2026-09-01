@@ -183,7 +183,7 @@
           return "Switches every " + formatMinutes(settings.delay) + order;
         }
 
-        function renderPlaylistItems(items, settings) {
+        function renderPlaylistItems(items, settings, totalCount) {
           var section = document.getElementById("playlistItemsSection");
           var list = document.getElementById("playlistItemsList");
           var timing = document.getElementById("playlistTiming");
@@ -209,6 +209,10 @@
             thumb.src = item.preview || "";
             thumb.alt = "";
             if (!item.preview) thumb.style.visibility = "hidden";
+            thumb.onerror = function () {
+              thumb.onerror = null;
+              thumb.style.visibility = "hidden";
+            };
 
             var title = document.createElement("span");
             title.className = "playlist-item-title";
@@ -219,6 +223,13 @@
             row.appendChild(title);
             list.appendChild(row);
           });
+
+          if (totalCount && totalCount > items.length) {
+            var more = document.createElement("div");
+            more.className = "playlist-item-more";
+            more.textContent = "+ " + (totalCount - items.length) + " more not shown";
+            list.appendChild(more);
+          }
 
           section.style.display = "";
         }
@@ -281,7 +292,7 @@
           }
 
           if (payload.event === "getPlaylistItems") {
-            renderPlaylistItems(payload.items, payload.settings);
+            renderPlaylistItems(payload.items, payload.settings, payload.totalCount);
           }
         });
       });

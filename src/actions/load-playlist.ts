@@ -33,6 +33,8 @@ type PluginMessage = {
   playlistName?: string;
 };
 
+const MAX_PI_ITEMS = 50;
+
 @action({ UUID: "com.unai-gonzalez.wallpaper-deck.load-playlist" })
 export class LoadPlaylist extends SingletonAction<LoadPlaylistSettings> {
   private readonly settingsCache = new Map<string, LoadPlaylistSettings>();
@@ -162,8 +164,14 @@ export class LoadPlaylist extends SingletonAction<LoadPlaylistSettings> {
       } else if (msg.event === "getPlaylistItems" && msg.playlistName) {
         const configBackupsPath = this.getCachedConfigBackupsPath(ev.action.id);
         const playlist = this.findPlaylist(configBackupsPath, msg.playlistName);
-        const items = getPlaylistItemDetails(playlist?.items ?? []);
-        await streamDeck.ui.sendToPropertyInspector({ event: "getPlaylistItems", items, settings: playlist?.settings ?? null });
+        const allItems = playlist?.items ?? [];
+        const items = getPlaylistItemDetails(allItems.slice(0, MAX_PI_ITEMS));
+        await streamDeck.ui.sendToPropertyInspector({
+          event: "getPlaylistItems",
+          items,
+          totalCount: allItems.length,
+          settings: playlist?.settings ?? null,
+        });
       } else if (msg.event === "getMonitors") {
         const monitors = await listMonitors();
         const items = monitors.map((m) => ({
