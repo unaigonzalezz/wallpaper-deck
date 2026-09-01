@@ -121,6 +121,10 @@
 .tip:hover::after {
   opacity: 1;
 }
+.tip-below::after {
+  bottom: auto;
+  top: calc(100% + 6px);
+}
 
 .playlist-path {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
